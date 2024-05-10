@@ -41,10 +41,11 @@ int main(int argc, char **argv){
     char *dir_path = argv[1];
     char *search_term = argv[2];
     struct CorpusInfo *corpus_info;
-    struct hashmap *tf_files;
+    struct hashmap *df_files, *tf_files;
     printf("search term %s in %s \n", search_term, dir_path);
     tf_files = calc_tf_for_corpus(dir_path);
-    corpus_info = get_corpus_info(dir_path, tf_files);
+    df_files = df_corpus(tf_files);
+    corpus_info = get_corpus_info(dir_path,df_files, tf_files);
     search_term_in_corpus(search_term, corpus_info);
     
     hashmap_free(corpus_info->df_files);

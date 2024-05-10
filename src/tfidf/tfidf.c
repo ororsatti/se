@@ -33,6 +33,25 @@ void term_freq_item_free(void *item) {
     free(it->key);
 }
 
+void add_next_token(struct hashmap *map, char *next_token) {
+    const struct TermFreq *item = hashmap_get(map, &(struct TermFreq){.key=next_token});
+
+    if(item == NULL) {
+        struct TermFreq tmp;
+        tmp.count = 1;
+        tmp.key = malloc(sizeof(*next_token) *strlen(next_token));
+        strcpy(tmp.key,next_token);
+        hashmap_set(map, &tmp);
+    }
+    
+    else {
+        struct TermFreq tmp;
+        tmp.count = item->count + 1;
+        tmp.key = item->key;
+        hashmap_set(map, &tmp);
+    }
+}
+
 struct hashmap *tf_file(char *file_path) {
     FILE *fptr = fopen(file_path, "r");
     char *next_token = NULL;
@@ -50,33 +69,18 @@ struct hashmap *tf_file(char *file_path) {
                                       term_freq_item_compare, 
                                       term_freq_item_free, 
                                       NULL);
-
-    do{
+    // go over all tokens and add them to the hashmap
+    do {
         next_token = get_next_word(fptr);
         if(next_token == NULL) {
             break;
         }
-        const struct TermFreq *item = hashmap_get(map, &(struct TermFreq){.key=next_token});
-
-        if(item == NULL) {
-            struct TermFreq tmp;
-            tmp.count = 1;
-            tmp.key = malloc(sizeof(*next_token) *strlen(next_token));
-            strcpy(tmp.key,next_token);
-            hashmap_set(map, &tmp);
-        }
-        
-        else {
-            struct TermFreq tmp;
-            tmp.count = item->count + 1;
-            tmp.key = item->key;
-            hashmap_set(map, &tmp);
-        }
-
+        add_next_token(map,next_token);
         doc_term_count++;
         free(next_token);
     } while(next_token != NULL);
-    
+
+    // calculate the tf of each token
     while(hashmap_iter(map,&i,  &item)) {
         struct TermFreq *tf_item = (struct TermFreq*)(item);
         tf_item->freq = (float)tf_item->count / doc_term_count;
@@ -84,7 +88,6 @@ struct hashmap *tf_file(char *file_path) {
     fclose(fptr);
     return map;
 }
-
 
 uint64_t df_item_hash(const void *item, uint64_t seed0, uint64_t seed1) {
     const struct DocFreq *it = item;
@@ -102,42 +105,22 @@ void df_item_free(void *item) {
     free(it->term);
 }
 
-struct CorpusInfo *get_corpus_info(char *dir_path, struct hashmap *tf_files) {
+struct hashmap *df_corpus(struct hashmap *tf_files) {
     struct hashmap *map = hashmap_new(sizeof(struct DocFreq),
                                       0, 0, 0,
                                       df_item_hash,
                                       df_item_compare, 
                                       df_item_free,
                                       NULL);
-    
-    DIR *pDir = opendir(dir_path);
-    struct dirent *pDirnet;
-    size_t file_count = 0;
-    struct CorpusInfo *corpus_info;
-    char *next_token, file_name;
     size_t i = 0;
     void *item =NULL;
-    if(pDir == NULL) {
-        printf("ERROR in 'idf_dir': failed to open directory\n");
-        return NULL;
-    }
-    corpus_info = malloc(sizeof(struct CorpusInfo));
-    
-    // iterating over corpus and counting files
-    while((pDirnet = readdir(pDir)) != NULL) {
-        if(strcmp(pDirnet->d_name,  ".") == 0 
-            || strcmp(pDirnet->d_name,  "..") == 0) {
-            continue;
-        }
-        file_count++;
-    }
     // iterating over tf map of the files
     while(hashmap_iter(tf_files,&i,  &item)) {
         struct FileTf *file_tf_item = (struct FileTf*)(item);
         size_t j = 0;
         void *term_freq_item;
         // iterating over each file's tf and adding the term count to the doc freq map 
-        while(hashmap_iter(file_tf_item->tf,&j,  &term_freq_item)) {
+        while(hashmap_iter(file_tf_item->tf, &j,  &term_freq_item)) {
             struct TermFreq *term_freq = (struct TermFreq*)term_freq_item;
             struct DocFreq *doc_freq = (struct DocFreq*)hashmap_get(map, &(struct DocFreq){
                 .term = term_freq->key
@@ -155,11 +138,32 @@ struct CorpusInfo *get_corpus_info(char *dir_path, struct hashmap *tf_files) {
             hashmap_set(map, doc_freq);
         }
     }
-    i = 0;
-    item = NULL;
+    return map;
+}
 
+struct CorpusInfo *get_corpus_info(char *dir_path,struct hashmap *df_files, struct hashmap *tf_files) {
+    
+    DIR *pDir = opendir(dir_path);
+    struct dirent *pDirnet;
+    size_t file_count = 0;
+    struct CorpusInfo *corpus_info;
+    char *next_token, file_name;
+    if(pDir == NULL) {
+        printf("ERROR in 'idf_dir': failed to open directory\n");
+        return NULL;
+    }
+    corpus_info = malloc(sizeof(struct CorpusInfo));
+    
+    // iterating over corpus and counting files
+    while((pDirnet = readdir(pDir)) != NULL) {
+        if(strcmp(pDirnet->d_name,  ".") == 0 
+            || strcmp(pDirnet->d_name,  "..") == 0) {
+            continue;
+        }
+        file_count++;
+    }
     corpus_info->file_count = file_count;
-    corpus_info->df_files = map;
+    corpus_info->df_files = df_files;
     corpus_info->tf_files = tf_files;
     corpus_info->dir_path = dir_path;
     closedir(pDir);   

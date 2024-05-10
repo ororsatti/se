@@ -18,7 +18,8 @@ void file_tf_free(void *item);
 
 struct hashmap *tf_file(char *file_path);
 struct hashmap *calc_tf_for_corpus(char*);
-struct CorpusInfo *get_corpus_info(char *dir_path, struct hashmap *tf_files);
+struct hashmap *df_corpus(struct hashmap *tf_files);
+struct CorpusInfo *get_corpus_info(char *dir_path,struct hashmap *df_files, struct hashmap *tf_files);
 double calc_tfidf(size_t ,double , size_t);
 
 
