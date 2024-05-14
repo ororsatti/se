@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,6 +6,7 @@
 #include "tokenizer/tokenizer.h"
 #include "hash_map/hashmap.h"
 #include "tfidf/tfidf.h"
+#include "db/db.h"
 
 void search_term_in_corpus(char *term,struct CorpusInfo *ci) {
     double max_tfidf = 0;
@@ -42,34 +42,16 @@ int main(int argc, char **argv){
     char *search_term = argv[2];
     struct CorpusInfo *corpus_info;
     struct hashmap *df_files, *tf_files;
+    sqlite3 *db;
     printf("search term %s in %s \n", search_term, dir_path);
     tf_files = calc_tf_for_corpus(dir_path);
     df_files = df_corpus(tf_files);
     corpus_info = get_corpus_info(dir_path,df_files, tf_files);
     search_term_in_corpus(search_term, corpus_info);
-    
+    db = init_db(dir_path);
     hashmap_free(corpus_info->df_files);
     hashmap_free(tf_files);
+    sqlite3_close(db);
     free(corpus_info);
     return 0;
 }
-
-
-// while(hashmap_iter(tf_files,&i,  &item)) {
-//     struct FileTf *file_tf_item = (struct FileTf*)(item);
-//     size_t j = 0;
-//     void *tf;
-//     printf("-----------------------\n");
-//     printf("Iterating over: %s \n", file_tf_item->path);
-//     printf("-----------------------\n");
-//     while(hashmap_iter(file_tf_item->tf,&j,  &tf)) {
-//         struct TermFreq *tf_as_tf = (struct TermFreq*)tf;
-//         struct DocFreq tmp = { .term = tf_as_tf->key};
-//         struct DocFreq* df = (struct DocFreq*)hashmap_get(corpus_info->df_files, &tmp);
-//
-//         double tfidf = calc_tfidf(df->count, tf_as_tf->freq, corpus_info->file_count); 
-//         printf("    -----------------------\n");
-//         printf("    df: %s: tfidf:  %f\n", df->term, tfidf);
-//         printf("    -----------------------\n");
-//     }
-// }
