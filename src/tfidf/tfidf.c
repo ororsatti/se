@@ -1,4 +1,5 @@
 #include "tfidf.h"
+#include <stdlib.h>
 #include <sys/_types/_size_t.h>
 
 uint64_t file_tf_hash(const void *item, uint64_t seed0, uint64_t seed1) {
@@ -171,22 +172,6 @@ struct CorpusInfo *get_corpus_info(char *dir_path,struct hashmap *df_files, stru
     return corpus_info;
 }
 
-char *construct_file_path(char *dir_path, char *file_name) {
-    int dir_path_size = strlen(dir_path), 
-        file_name_size = strlen(file_name);
-
-    if(dir_path[dir_path_size-1] == '/') {
-        dir_path[dir_path_size-1] = 0;
-        dir_path_size--;
-    }
-    
-    char *file_path = malloc((file_name_size + dir_path_size + 1) * sizeof(char));
-    strcat(file_path, dir_path);
-    strcat(file_path, "/");
-    strcat(file_path, file_name);
-    
-    return file_path;
-}
 
 struct hashmap *calc_tf_for_corpus(char *dir_path) {
     struct hashmap *tf_files;
@@ -213,6 +198,7 @@ struct hashmap *calc_tf_for_corpus(char *dir_path) {
             || strcmp(pDirent->d_name,  "..") == 0) {
             continue;
         }
+        // file_path = malloc(sizeof(char) * strlen(pDirent->d_name));
         file_path  = construct_file_path(dir_path, pDirent->d_name);
         tf_for_file = tf_file(file_path);
 

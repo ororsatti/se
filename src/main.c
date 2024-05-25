@@ -28,27 +28,34 @@ void search_term_in_corpus(char *term,struct CorpusInfo *ci) {
     }
 
     printf("%s \n", relavent_file_path);
+}
 
+void save_files(struct hashmap *tf_files, sqlite3 *db) {
+    void *item;
+    size_t i = 0, index = 0,
+            count = hashmap_count(tf_files);
+    char **pathes = malloc(count * sizeof(char**));
+    while(hashmap_iter(tf_files, &i, &item)) {
+        struct FileTf *file_tf = (struct FileTf*)item;
+        pathes[index] = file_tf->path;
+        index++;
+    }
+    insert_to_files_table(db, pathes ,count);
+    insert_to_tf_table(db, tf_files, NULL, 0);
+    free(pathes);
 }
 
 int main(int argc, char **argv){
 
-    if(argc == 1){
-
-        printf("ERROR in 'main': missing file_path \n");
-        return 1;
-    }
     char *dir_path = argv[1];
-    char *search_term = argv[2];
     struct CorpusInfo *corpus_info;
     struct hashmap *df_files, *tf_files;
     sqlite3 *db;
-    printf("search term %s in %s \n", search_term, dir_path);
     tf_files = calc_tf_for_corpus(dir_path);
     df_files = df_corpus(tf_files);
     corpus_info = get_corpus_info(dir_path,df_files, tf_files);
-    search_term_in_corpus(search_term, corpus_info);
     db = init_db(dir_path);
+    save_files(tf_files, db);
     hashmap_free(corpus_info->df_files);
     hashmap_free(tf_files);
     sqlite3_close(db);
