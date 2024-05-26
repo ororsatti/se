@@ -30,7 +30,7 @@ void search_term_in_corpus(char *term,struct CorpusInfo *ci) {
     printf("%s \n", relavent_file_path);
 }
 
-void save_files(struct hashmap *tf_files, sqlite3 *db) {
+void save_files(struct hashmap *tf_files,struct hashmap *df_files, sqlite3 *db) {
     void *item;
     size_t i = 0, index = 0,
             count = hashmap_count(tf_files);
@@ -42,6 +42,7 @@ void save_files(struct hashmap *tf_files, sqlite3 *db) {
     }
     insert_to_files_table(db, pathes ,count);
     insert_to_tf_table(db, tf_files, NULL, 0);
+    insert_to_df_table(db, df_files, NULL,0);
     free(pathes);
 }
 
@@ -55,7 +56,7 @@ int main(int argc, char **argv){
     df_files = df_corpus(tf_files);
     corpus_info = get_corpus_info(dir_path,df_files, tf_files);
     db = init_db(dir_path);
-    save_files(tf_files, db);
+    save_files(tf_files,df_files, db);
     hashmap_free(corpus_info->df_files);
     hashmap_free(tf_files);
     sqlite3_close(db);
