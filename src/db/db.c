@@ -31,7 +31,7 @@ sqlite3 *init_db(char *path) {
         fprintf(stderr, "Can't open db %s \n", DB_NAME);
         return NULL;
     }
-    rc = sqlite3_exec(db, CONCAT(FILE_TABLE_INIT, TF_TABLE_INIT, DF_TABLE_INIT), cb, 0, &z_error_msg);
+    rc = sqlite3_exec(db, CONCAT(FILE_TABLE_INIT, TF_TABLE_INIT), cb, 0, &z_error_msg);
     if(rc != SQLITE_OK) {
         handle_sqlite_error(db,z_error_msg);
         return NULL;
@@ -79,7 +79,7 @@ void colonize_tf_stmt(sqlite3_stmt *stmt, char *path, struct TermFreq tf) {
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, tf.key, -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, 3, tf.count);
-    sqlite3_bind_int(stmt, 4, tf.freq);
+    sqlite3_bind_double(stmt, 4, (double)tf.freq);
 }
 
 void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_update, size_t len) {
@@ -104,11 +104,6 @@ void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_up
 
         while (hashmap_iter(ftf->tf, &tf_hashmap_index, &tf_item)) {
             struct TermFreq *tf = tf_item;
-            // printf("    inserting the following values: \n");
-            // printf("        path = %s\n", path);
-            // printf("        term = %s\n", tf->key);
-            // printf("        count = %d\n", tf->count);
-            // printf("        freq = %f\n", tf->freq);
             colonize_tf_stmt(stmt, path, *tf);
             err = sqlite3_step(stmt);
 
@@ -122,34 +117,35 @@ void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_up
     }
 }
 
-void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len) {
-    void *item;
-    size_t hashmap_index = 0;
-    int err;
-    while (hashmap_iter(df_files, &hashmap_index, &item)) {
-        void *tf_item;
-        size_t tf_hashmap_index = 0;
-        
-        struct DocFreq *df = item;
-        char *stmt_str = "INSERT OR REPLACE INTO df VALUES (?,?)";
-        sqlite3_stmt *stmt;
 
-        err = sqlite3_prepare_v2(db, stmt_str, -1, &stmt, NULL);
-
-        if(err != SQLITE_OK) {
-            printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
-            sqlite3_finalize(stmt);
-        }
-        sqlite3_bind_text(stmt, 1, df->term, -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 2, df->count);
-        err = sqlite3_step(stmt);
-
-        if(err != SQLITE_DONE) {
-            printf("Failed to insert %s to df table. ERROR CODE: %d \n",df->term, sqlite3_errcode(db));
-            printf("%s\n",sqlite3_errmsg(db));
-            sqlite3_finalize(stmt);
-        }
-        sqlite3_reset(stmt);
-    }
-}
+// void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len) {
+//     void *item;
+//     size_t hashmap_index = 0;
+//     int err;
+//     while (hashmap_iter(df_files, &hashmap_index, &item)) {
+//         void *tf_item;
+//         size_t tf_hashmap_index = 0;
+//         
+//         struct DocFreq *df = item;
+//         char *stmt_str = "INSERT OR REPLACE INTO df VALUES (?,?)";
+//         sqlite3_stmt *stmt;
+//
+//         err = sqlite3_prepare_v2(db, stmt_str, -1, &stmt, NULL);
+//
+//         if(err != SQLITE_OK) {
+//             printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
+//             sqlite3_finalize(stmt);
+//         }
+//         sqlite3_bind_text(stmt, 1, df->term, -1, SQLITE_STATIC);
+//         sqlite3_bind_int(stmt, 2, df->count);
+//         err = sqlite3_step(stmt);
+//
+//         if(err != SQLITE_DONE) {
+//             printf("Failed to insert %s to df table. ERROR CODE: %d \n",df->term, sqlite3_errcode(db));
+//             printf("%s\n",sqlite3_errmsg(db));
+//             sqlite3_finalize(stmt);
+//         }
+//         sqlite3_reset(stmt);
+//     }
+// }
 

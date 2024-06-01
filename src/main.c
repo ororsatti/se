@@ -42,9 +42,11 @@ void save_files(struct hashmap *tf_files,struct hashmap *df_files, sqlite3 *db) 
     }
     insert_to_files_table(db, pathes ,count);
     insert_to_tf_table(db, tf_files, NULL, 0);
-    insert_to_df_table(db, df_files, NULL,0);
+    // insert_to_df_table(db, df_files, NULL,0);
     free(pathes);
 }
+
+void update_db() {}
 
 int main(int argc, char **argv){
 

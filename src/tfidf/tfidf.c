@@ -223,3 +223,28 @@ double calc_tfidf(size_t doc_freq, double term_freq, size_t doc_count) {
     double term_count = (double)(doc_freq == 0 ? 1: doc_freq);
     return term_freq * log(doc_count/term_count); 
 }
+
+void print_tf_files(struct hashmap *tf_files) {
+    size_t i = 0;
+    void *item;
+    while(hashmap_iter(tf_files, &i, &item)) {
+        struct FileTf *ftf = item;
+        size_t j = 0;
+        char *max_name = NULL;
+        size_t max = 0;
+        void *inner_item;
+
+        while (hashmap_iter(ftf->tf, &j, &inner_item)) {
+            struct TermFreq *tf = inner_item;
+            if(max < tf->count) {
+                max_name = tf->key;
+                max = tf->count;
+            }
+        }
+        printf("##################################### \n");
+        printf("%s: \n", ftf->path);
+        printf("    '%s' : %zu \n", max_name ,max);
+        printf("##################################### \n");
+        printf("\n");
+    }
+}

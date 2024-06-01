@@ -22,7 +22,7 @@ struct hashmap *calc_tf_for_corpus(char*);
 struct hashmap *df_corpus(struct hashmap *tf_files);
 struct CorpusInfo *get_corpus_info(char *dir_path,struct hashmap *df_files, struct hashmap *tf_files);
 double calc_tfidf(size_t ,double , size_t);
-
+void print_tf_files(struct hashmap *tf_files);
 
 struct TermFreq {
     char *key;

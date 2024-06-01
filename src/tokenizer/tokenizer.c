@@ -10,7 +10,7 @@ void trim_left(FILE *fptr)
     char c;
     while (!feof(fptr)) {
         c = fgetc(fptr);
-        if(c == ' ' || c == '\n' || c == EOF)
+        if(c == ' ' || c == '\n' || c == EOF || c == '\r')
         {
             continue;
         }
@@ -84,6 +84,7 @@ char *get_next_word(FILE *fptr)
         else {
             token = add_char_to_string(token, c);
             break;
+
         }
     }
     return token;
