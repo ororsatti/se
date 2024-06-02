@@ -1,6 +1,7 @@
 #include "db.h"
 #include "../utils/utils.h"
 #include "../tfidf/tfidf.h"
+#include "../dynamic_array/dynamic_array.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,18 @@ int cb(void *not_used, int argc, char **argv, char **az_col_name) {
         printf("%s = %s\n", az_col_name[i], argv[i] ? argv[i] : "NULL");
     }
     printf("\n");
+    return 0;
+}
+
+int file_names_cb(void *v, int argc, char **argv, char **az_col_name) {
+    int i;
+    for (i=0; i<argc; i++) {
+        if(strcmp(az_col_name[i],"path") == 0) {
+            char *name = malloc(strlen(argv[i]) * sizeof(char));
+            strcpy(name, argv[i]);
+            arr_push(v, name);
+        }
+    }
     return 0;
 }
 
@@ -116,7 +129,17 @@ void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_up
         }
     }
 }
-
+// int (*callback)(void *, int, char **, char **)
+void load_files_from_db(sqlite3 *db) {
+    char *sql = "SELECT * FROM files;";
+    char *err_msg;
+    struct array *file_names = arr_init(sizeof(char*));
+    sqlite3_exec(db, sql, file_names_cb ,file_names, &err_msg);
+    for (int i = 0; i < file_names->len; i++) {
+        printf("path: %s \n", (char*)file_names->items[i]);
+    }
+    arr_free(file_names);
+}
 
 // void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len) {
 //     void *item;

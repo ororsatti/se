@@ -14,3 +14,4 @@ sqlite3 *init_db(char *path);
 void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len);
 void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_update, size_t len);
 void insert_to_files_table(sqlite3 *db, char **paths, size_t paths_count);
+void load_files_from_db(sqlite3 *db);

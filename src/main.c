@@ -3,6 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/dirent.h>
+#include <sys/stat.h>
 #include "tokenizer/tokenizer.h"
 #include "hash_map/hashmap.h"
 #include "tfidf/tfidf.h"
@@ -46,7 +47,29 @@ void save_files(struct hashmap *tf_files,struct hashmap *df_files, sqlite3 *db) 
     free(pathes);
 }
 
-void update_db() {}
+void update_db(char *dir_path) {
+    DIR *pDir = opendir(dir_path);
+    struct dirent *pDirent;
+    if(pDir == NULL) {
+        printf("ERROR in 'update_db': failed to open directory\n");
+        return;
+    }
+    while((pDirent = readdir(pDir)) != NULL) {
+        char *file_path;
+
+        if(strcmp(pDirent->d_name,  ".") == 0 
+            || strcmp(pDirent->d_name,  "..") == 0) {
+            continue;
+        }
+
+        file_path  = construct_file_path(dir_path, pDirent->d_name);
+        struct stat result;
+        stat(file_path, &result);
+        unsigned long updated_at = result.st_mtimespec.tv_sec;
+        unsigned long crated_at = result.st_birthtimespec.tv_sec;
+    
+    }
+}
 
 int main(int argc, char **argv){
 
@@ -58,7 +81,8 @@ int main(int argc, char **argv){
     df_files = df_corpus(tf_files);
     corpus_info = get_corpus_info(dir_path,df_files, tf_files);
     db = init_db(dir_path);
-    save_files(tf_files,df_files, db);
+    // save_files(tf_files,df_files, db);
+    load_files_from_db(db);
     hashmap_free(corpus_info->df_files);
     hashmap_free(tf_files);
     sqlite3_close(db);
