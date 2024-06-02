@@ -1,11 +1,5 @@
 #include "db.h"
-#include "../utils/utils.h"
-#include "../tfidf/tfidf.h"
-#include "../dynamic_array/dynamic_array.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
 
 int cb(void *not_used, int argc, char **argv, char **az_col_name) {
     int i;
@@ -34,11 +28,14 @@ void handle_sqlite_error(sqlite3 *db, char *err_msg) {
     sqlite3_close(db);
 }
 
+void handle_quitely_sqlite_error(sqlite3 *db, char *err_msg){
+    fprintf(stderr,"SQL error: %s \n",err_msg);
+}
+
 sqlite3 *init_db(char *path) {
     char *db_path, *z_error_msg = NULL;
     int rc;
     sqlite3 *db;
-    // db_path = construct_file_path(path, DB_NAME); 
     rc = sqlite3_open(DB_NAME, &db);
     if(rc) {
         fprintf(stderr, "Can't open db %s \n", DB_NAME);
@@ -129,8 +126,7 @@ void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_up
         }
     }
 }
-// int (*callback)(void *, int, char **, char **)
-void load_files_from_db(sqlite3 *db) {
+struct array *load_files_from_db(sqlite3 *db) {
     char *sql = "SELECT * FROM files;";
     char *err_msg;
     struct array *file_names = arr_init(sizeof(char*));
@@ -138,37 +134,31 @@ void load_files_from_db(sqlite3 *db) {
     for (int i = 0; i < file_names->len; i++) {
         printf("path: %s \n", (char*)file_names->items[i]);
     }
-    arr_free(file_names);
+    return file_names;
 }
 
-// void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len) {
-//     void *item;
-//     size_t hashmap_index = 0;
-//     int err;
-//     while (hashmap_iter(df_files, &hashmap_index, &item)) {
-//         void *tf_item;
-//         size_t tf_hashmap_index = 0;
-//         
-//         struct DocFreq *df = item;
-//         char *stmt_str = "INSERT OR REPLACE INTO df VALUES (?,?)";
-//         sqlite3_stmt *stmt;
-//
-//         err = sqlite3_prepare_v2(db, stmt_str, -1, &stmt, NULL);
-//
-//         if(err != SQLITE_OK) {
-//             printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
-//             sqlite3_finalize(stmt);
-//         }
-//         sqlite3_bind_text(stmt, 1, df->term, -1, SQLITE_STATIC);
-//         sqlite3_bind_int(stmt, 2, df->count);
-//         err = sqlite3_step(stmt);
-//
-//         if(err != SQLITE_DONE) {
-//             printf("Failed to insert %s to df table. ERROR CODE: %d \n",df->term, sqlite3_errcode(db));
-//             printf("%s\n",sqlite3_errmsg(db));
-//             sqlite3_finalize(stmt);
-//         }
-//         sqlite3_reset(stmt);
-//     }
-// }
+void get_file_info_from_db(sqlite3 *db, char *path) {
+    char *sql = "SELECT * FROM files WHERE files.path=?";
+    sqlite3_stmt *stmt; 
+    int err;
+    err = sqlite3_prepare_v2(db, sql, -1,&stmt, NULL); 
+    if(err != SQLITE_OK) {
+        printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
+        sqlite3_finalize(stmt);
+    }
+    
+    sqlite3_bind_text(stmt, 1, path, -1,SQLITE_STATIC);
+    err = sqlite3_step(stmt);
+    printf("we are here %d \n", err);
+    char *test = (char*)sqlite3_column_text(stmt, 0);
+    long int created_at = sqlite3_column_int64(stmt, 1);
+    long int updated_at = sqlite3_column_int64(stmt, 2);
+    printf("%d %s | %ld | %ld\n", sqlite3_column_count(stmt), test, created_at,updated_at);
+
+    err = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    // sqlite3_reset(stmt);
+}
+
+
 

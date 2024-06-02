@@ -1,4 +1,6 @@
 #include "utils.h"
+#include <stdlib.h>
+#include <string.h>
 char *construct_file_path(char *dir_path, char *file_name) {
     int dir_path_size = strlen(dir_path), 
         file_name_size = strlen(file_name);
@@ -15,4 +17,6 @@ char *construct_file_path(char *dir_path, char *file_name) {
     
     return file_path;
 }
+
+
 

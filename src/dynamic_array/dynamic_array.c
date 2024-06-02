@@ -1,5 +1,4 @@
 #include "dynamic_array.h"
-#include <stdlib.h>
 void arr_push(struct array *a, void *pV) {
     void **tmp;
     if(a->len == a->capacity) {
@@ -35,3 +34,27 @@ void arr_free(struct array *a) {
 
 void arr_pop(struct array *a) {
 };
+
+struct array *arr_diff(struct array *src, struct array *dest) {
+    struct array *diffs = arr_init(sizeof(char*));
+    size_t src_len = src->len, 
+        dest_len = dest->len;
+    for (int i = 0; i < src_len; i++) {
+        char *src_item = src->items[i];
+        int str_eqls = 1;
+        for (int j = 0; j < dest_len; j++) {
+            char *dest_item = dest->items[i];
+            if(str_eqls == 0) {
+                break;
+            }
+            str_eqls = strcmp(src_item, dest_item);
+        }
+        
+        if(str_eqls != 0) {
+            char *cp = malloc(strlen(dest->items[i]));
+            strcpy(cp, dest->items[i]);
+            arr_push(diffs, cp);
+        }
+    }
+    return diffs;
+}

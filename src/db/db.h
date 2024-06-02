@@ -1,6 +1,13 @@
 #include <sqlite3.h>
 #include <stdlib.h>
 #include "../hash_map/hashmap.h"
+#include "../utils/utils.h"
+#include "../tfidf/tfidf.h"
+#include "../dynamic_array/dynamic_array.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #define FILE_TABLE_INIT "CREATE TABLE IF NOT EXISTS files(path TEXT NOT NULL UNIQUE PRIMARY KEY, created_at INTEGER DEFAULT (unixepoch('now')), updated_at INTEGER DEFAULT (unixepoch('now')));" 
 
@@ -14,4 +21,5 @@ sqlite3 *init_db(char *path);
 void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_update, size_t len);
 void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_update, size_t len);
 void insert_to_files_table(sqlite3 *db, char **paths, size_t paths_count);
-void load_files_from_db(sqlite3 *db);
+struct array *load_files_from_db(sqlite3 *db);
+void get_file_info_from_db(sqlite3 *db, char *path);
