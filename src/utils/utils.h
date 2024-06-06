@@ -3,4 +3,5 @@
 #include <stdio.h>
 
 char *construct_file_path(char *dir_path, char *file_name);
+void free_string(void *s);
 

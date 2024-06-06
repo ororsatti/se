@@ -129,16 +129,12 @@ void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_up
 struct array *load_files_from_db(sqlite3 *db) {
     char *sql = "SELECT * FROM files;";
     char *err_msg;
-    struct array *file_names = arr_init(sizeof(char*));
-    sqlite3_exec(db, sql, file_names_cb ,file_names, &err_msg);
-    for (int i = 0; i < file_names->len; i++) {
-        printf("path: %s \n", (char*)file_names->items[i]);
-    }
+    struct array *file_names = arr_init(sizeof(char*)); sqlite3_exec(db, sql, file_names_cb ,file_names, &err_msg);
     return file_names;
 }
 
-void get_file_info_from_db(sqlite3 *db, char *path) {
-    char *sql = "SELECT * FROM files WHERE files.path=?";
+unsigned long get_updated_at_from_db(sqlite3 *db, char *path) {
+    char *sql = "SELECT updated_at FROM files WHERE files.path=?";
     sqlite3_stmt *stmt; 
     int err;
     err = sqlite3_prepare_v2(db, sql, -1,&stmt, NULL); 
@@ -149,16 +145,54 @@ void get_file_info_from_db(sqlite3 *db, char *path) {
     
     sqlite3_bind_text(stmt, 1, path, -1,SQLITE_STATIC);
     err = sqlite3_step(stmt);
-    printf("we are here %d \n", err);
-    char *test = (char*)sqlite3_column_text(stmt, 0);
-    long int created_at = sqlite3_column_int64(stmt, 1);
-    long int updated_at = sqlite3_column_int64(stmt, 2);
-    printf("%d %s | %ld | %ld\n", sqlite3_column_count(stmt), test, created_at,updated_at);
 
-    err = sqlite3_step(stmt);
+    if(err != SQLITE_ROW) {
+        printf("An error as occured: %d %s \n",err, sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return 0;
+    }
+    unsigned long updated_at = sqlite3_column_int64(stmt, 0);
     sqlite3_finalize(stmt);
-    // sqlite3_reset(stmt);
+
+    return updated_at;
 }
 
+void update_file(sqlite3 *db,struct FileTf ftf) {}
+void add_file(sqlite3 *db, struct FileTf ftf) {}
+void remove_file(sqlite3 *db, char *file_path) {
+    const char *sql_files = "DELETE FROM files WHERE files.path=?",
+        *sql_tf = "DELETE FROM tf WHERE tf.path=?";
+    sqlite3_stmt *stmt;
+    int err;
 
+    err = sqlite3_prepare_v2(db, sql_tf, -1,&stmt, NULL); 
+    if(err != SQLITE_OK) {
+        printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_bind_text(stmt, 1, file_path, -1, SQLITE_STATIC);
+    err = sqlite3_step(stmt);
+    // TODO: finish this function and test
+    if(err != SQLITE_DONE) {
+        printf("An error as occured: %d %s \n",err, sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return;
+    }
 
+    err = sqlite3_prepare_v2(db, sql_files, -1,&stmt, NULL); 
+    if(err != SQLITE_OK) {
+        printf("Failed to create prepared statement, ERROR CODE: %d \n", sqlite3_errcode(db));
+        sqlite3_finalize(stmt);
+    }
+    sqlite3_bind_text(stmt, 1, file_path, -1, SQLITE_STATIC);
+
+    err = sqlite3_step(stmt);
+
+    if(err != SQLITE_DONE) {
+        printf("An error as occured: %d %s \n",err, sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return;
+    }
+
+    sqlite3_finalize(stmt);
+}

@@ -22,4 +22,7 @@ void insert_to_df_table(sqlite3 *db, struct hashmap *df_files, char **files_to_u
 void insert_to_tf_table(sqlite3 *db, struct hashmap *tf_files,char **files_to_update, size_t len);
 void insert_to_files_table(sqlite3 *db, char **paths, size_t paths_count);
 struct array *load_files_from_db(sqlite3 *db);
-void get_file_info_from_db(sqlite3 *db, char *path);
+unsigned long get_updated_at_from_db(sqlite3 *db, char *path);
+void update_file(sqlite3 *db,struct FileTf ftf);
+void add_file(sqlite3 *db, struct FileTf ftf);
+void remove_file(sqlite3 *db, char *file_path);

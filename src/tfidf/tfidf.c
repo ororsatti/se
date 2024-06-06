@@ -1,4 +1,5 @@
 #include "tfidf.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/_types/_size_t.h>
 
@@ -58,9 +59,9 @@ struct hashmap *tf_file(char *file_path) {
     char *next_token = NULL;
     size_t i = 0;
     void *item;
-
+    
     if(fptr == NULL) {
-        printf("ERROR in 'tf_file(char *file_path)': Could not open file \n");
+        printf("ERROR in 'tf_file': Could not open file %s\n", file_path);
         return NULL;
     }
     int doc_term_count = 0;
@@ -121,12 +122,15 @@ struct hashmap *df_corpus(struct hashmap *tf_files) {
         size_t j = 0;
         void *term_freq_item;
         // iterating over each file's tf and adding the term count to the doc freq map 
+        printf("file: %s\n", file_tf_item->path);
         while(hashmap_iter(file_tf_item->tf, &j,  &term_freq_item)) {
             struct TermFreq *term_freq = (struct TermFreq*)term_freq_item;
+            printf("    got term: %s ", term_freq->key);
             struct DocFreq *doc_freq = (struct DocFreq*)hashmap_get(map, &(struct DocFreq){
                 .term = term_freq->key
             });
             if(doc_freq == NULL) {
+                printf("    not found: %s \n",term_freq->key);
                 struct DocFreq tmp = {
                     .term = malloc(strlen(term_freq->key)*sizeof(char)),
                     .count = 1
@@ -134,11 +138,13 @@ struct hashmap *df_corpus(struct hashmap *tf_files) {
                 strcpy(tmp.term,term_freq->key);
                 doc_freq = &tmp;
             }else {
+                printf("    found in df: %s %zu \n",doc_freq->term, doc_freq->count);
                 doc_freq->count++;
             }
             hashmap_set(map, doc_freq);
         }
     }
+    printf("done dfing\n");
     return map;
 }
 
@@ -201,7 +207,6 @@ struct hashmap *calc_tf_for_corpus(char *dir_path) {
         // file_path = malloc(sizeof(char) * strlen(pDirent->d_name));
         file_path  = construct_file_path(dir_path, pDirent->d_name);
         tf_for_file = tf_file(file_path);
-
         if(tf_for_file == NULL) {
             printf("ERROR in 'calc_tf_for_corpus': failed to run ft_file\n");
             free(file_path);
@@ -222,29 +227,4 @@ struct hashmap *calc_tf_for_corpus(char *dir_path) {
 double calc_tfidf(size_t doc_freq, double term_freq, size_t doc_count) {
     double term_count = (double)(doc_freq == 0 ? 1: doc_freq);
     return term_freq * log(doc_count/term_count); 
-}
-
-void print_tf_files(struct hashmap *tf_files) {
-    size_t i = 0;
-    void *item;
-    while(hashmap_iter(tf_files, &i, &item)) {
-        struct FileTf *ftf = item;
-        size_t j = 0;
-        char *max_name = NULL;
-        size_t max = 0;
-        void *inner_item;
-
-        while (hashmap_iter(ftf->tf, &j, &inner_item)) {
-            struct TermFreq *tf = inner_item;
-            if(max < tf->count) {
-                max_name = tf->key;
-                max = tf->count;
-            }
-        }
-        printf("##################################### \n");
-        printf("%s: \n", ftf->path);
-        printf("    '%s' : %zu \n", max_name ,max);
-        printf("##################################### \n");
-        printf("\n");
-    }
 }
