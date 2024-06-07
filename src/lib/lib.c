@@ -80,7 +80,8 @@ struct hashmap *init_corpus() {
     return corpus;
 }
 
-void add_document(struct hashmap *corpus, char *key, char **terms, size_t term_count) {
+// adds or updates document to the corpus.
+void add_or_update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count) {
     struct Document d = {
         .terms = init_terms_map(),
         .key = malloc(strlen(key))
@@ -94,8 +95,13 @@ void add_document(struct hashmap *corpus, char *key, char **terms, size_t term_c
 
     hashmap_set(corpus, &d);
 }
-void remove_document(struct hashmap *corpus, char *key);
-void update_document(struct hashmap *corpus, struct Document new_doc);
+
+// remove a document from the corpus.
+// returns true if succeed, false if item not found
+bool remove_document(struct hashmap *corpus, char *key) {
+    return (bool)hashmap_delete(corpus, &(struct Document){ .key = key });
+}
+
 size_t get_corpus_size(struct hashmap *corpus);
 
 size_t get_doc_freq_for_term(struct hashmap *corpus, char *term);
@@ -106,4 +112,3 @@ size_t get_tfidf_for_term(struct hashmap *corpus, char *term);
  *  returning the n most relevant documents
  */
 struct Document *search_query(struct hashmap **corpus, char **search_terms, int n);
-

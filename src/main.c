@@ -69,10 +69,19 @@ int main2(int argc, char **argv){
 
 int main(int argc, char **argv) {
     struct hashmap *c = init_corpus();
-    char *terms[] = {
+    char *doc1[] = {
         "term1", "term2", "3term", "4term4", "term1"
     };
-    add_document(c, "doc1",terms, 5);
+    char *doc2[] = {
+        "term1doc2", "term2doc2", "3termdoc2", "4term4doc2", "term1doc2"
+    };
+    char *doc1edit[] = {
+        "term1doc1", "term2doc1", "3termdocrerdsfghjasdgh", "4term4doc2", "term1doc2"
+    };
+    add_or_update_document(c, "doc1",doc1, 5);
+    add_or_update_document(c, "doc2",doc2, 5);
+    add_or_update_document(c, "doc1",doc1edit, 5);
+    // remove_document(c,"doc2");
     size_t i = 0;
     void *corpus_item = NULL;
     while (hashmap_iter(c, &i, &corpus_item)) {

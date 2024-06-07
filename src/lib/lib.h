@@ -25,9 +25,9 @@ struct Document{
 struct hashmap *init_corpus();
 void free_corpus(struct hashmap *corpus);
 
-void add_document(struct hashmap *corpus, char *key, char **terms, size_t term_count);
-void remove_document(struct hashmap *corpus, char *key);
-void update_document(struct hashmap *corpus, struct Document new_doc);
+void add_or_update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count);
+bool remove_document(struct hashmap *corpus, char *key);
+// void update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count);
 size_t get_corpus_size(struct hashmap *corpus);
 void copy_string(char *src, char **dest);
 size_t get_doc_freq_for_term(struct hashmap *corpus, char *term);
