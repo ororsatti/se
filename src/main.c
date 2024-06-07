@@ -1,9 +1,9 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
 #include <sys/dirent.h>
+#include "lib/lib.h"
 #include "tokenizer/tokenizer.h"
 #include "hash_map/hashmap.h"
 #include "tfidf/tfidf.h"
@@ -31,15 +31,26 @@ void search_term_in_corpus(char *term,struct CorpusInfo *ci) {
 
 }
 
-int main(int argc, char **argv){
 
+char **get_search_terms(int argc, char **argv) {
+    int search_term_index = 0;
+    char **search_terms = malloc((argc-2)*sizeof(char*));
+    for (int i = 2; i<argc; i++ ) {
+        search_terms[search_term_index] = argv[i];
+        search_term_index++;
+    }
+    return search_terms;
+} 
+
+
+int main2(int argc, char **argv){
     if(argc == 1){
-
         printf("ERROR in 'main': missing file_path \n");
         return 1;
     }
     char *dir_path = argv[1];
     char *search_term = argv[2];
+    char **search_terms = get_search_terms(argc, argv);
     struct CorpusInfo *corpus_info;
     struct hashmap *df_files, *tf_files;
     printf("search term %s in %s \n", search_term, dir_path);
@@ -50,11 +61,32 @@ int main(int argc, char **argv){
     
     hashmap_free(corpus_info->df_files);
     hashmap_free(tf_files);
+    free(search_terms);
     free(corpus_info);
     return 0;
 }
 
 
+int main(int argc, char **argv) {
+    struct hashmap *c = init_corpus();
+    char *terms[] = {
+        "term1", "term2", "3term", "4term4", "term1"
+    };
+    add_document(c, "doc1",terms, 5);
+    size_t i = 0;
+    void *corpus_item = NULL;
+    while (hashmap_iter(c, &i, &corpus_item)) {
+        struct Document *doc = corpus_item;
+        size_t j = 0;
+        void *doc_item = NULL;
+        printf("doc key %s doc terms p: %p\n", doc->key, doc->terms);
+        while (hashmap_iter(doc->terms ,&j, &doc_item)) {
+            struct Term *term = doc_item;
+            printf("term: %s, frequency: %zu \n", term->key, term->freq);
+        }
+    }
+    hashmap_free(c);
+}
 // while(hashmap_iter(tf_files,&i,  &item)) {
 //     struct FileTf *file_tf_item = (struct FileTf*)(item);
 //     size_t j = 0;
