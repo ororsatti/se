@@ -70,17 +70,29 @@ int main2(int argc, char **argv){
 int main(int argc, char **argv) {
     struct hashmap *c = init_corpus();
     char *doc1[] = {
-        "term1", "term2", "3term", "4term4", "term1"
+        "is", 
+        "is", 
+        "is", 
+        "is", 
+        "is", 
+        "is", 
+        "is", 
+        "red", "yellow", "red", "blue", "gray"
     };
     char *doc2[] = {
-        "term1doc2", "term2doc2", "3termdoc2", "4term4doc2", "term1doc2"
+        "red", "yellow", "magenta", "black", "magenta", "pink"
     };
     char *doc1edit[] = {
         "term1doc1", "term2doc1", "3termdocrerdsfghjasdgh", "4term4doc2", "term1doc2"
     };
-    add_or_update_document(c, "doc1",doc1, 5);
-    add_or_update_document(c, "doc2",doc2, 5);
-    add_or_update_document(c, "doc1",doc1edit, 5);
+
+    char *query[] = {
+        "red", "pink", "is"
+    };
+
+    add_or_update_document(c, "doc1",doc1, 12);
+    add_or_update_document(c, "doc2",doc2, 6);
+    // add_or_update_document(c, "doc1",doc1edit, 5);
     // remove_document(c,"doc2");
     size_t i = 0;
     void *corpus_item = NULL;
@@ -91,9 +103,11 @@ int main(int argc, char **argv) {
         printf("doc key %s doc terms p: %p\n", doc->key, doc->terms);
         while (hashmap_iter(doc->terms ,&j, &doc_item)) {
             struct Term *term = doc_item;
-            printf("term: %s, frequency: %zu \n", term->key, term->freq);
+            printf("term: %s, count: %zu \n", term->key, term->count);
         }
     }
+    printf("the term term1 occures in %zu docs \n", get_doc_freq_for_term(c, "term1"));
+    printf("%s is the most relevant for the query: red is pink \n", search_query(c,query,2, 0));
     hashmap_free(c);
 }
 // while(hashmap_iter(tf_files,&i,  &item)) {

@@ -4,15 +4,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "../hash_map/hashmap.h"
 
 struct Term {
-    size_t freq;
+    size_t count;
     char *key;
 };
 
 struct Document{
-    // char *name;
     char *key;
     // map of struct Term
     struct hashmap *terms;
@@ -37,6 +37,6 @@ size_t get_tfidf_for_term(struct hashmap *corpus, char *term);
  *  searching a string inside a given corpus.
  *  returning the n most relevant documents
  */
-struct Document *search_query(struct hashmap **corpus, char **search_terms, int n);
+char *search_query(struct hashmap *corpus, char **search_terms,size_t st_count, int n);
 
 #endif
