@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <ctype.h>
-#include "../hash_map/hashmap.h"
-#include "../dynarray/dynarray.h"
+#include "hashmap/hashmap.h"
+#include "dynarray/dynarray.h"
 
 // Contains the score and the key of a given Document
 struct QueryResult {
