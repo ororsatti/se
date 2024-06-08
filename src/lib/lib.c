@@ -1,13 +1,13 @@
 #include "lib.h"
-#include <math.h>
-#include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
-#include <sys/_types/_size_t.h>
 
 #define CORPUS_EL_SIZE sizeof(struct Document)
 #define TERM_EL_SIZE sizeof(struct Term)
+#define QUERY_RESULT_SIZE sizeof(struct QueryResult)
 #define K 1.2
 #define B 0.75
+#define DEFAULT_DA_CAPACITY 100
 
 int _compare(const void *a, const void *b, void *udata) {
     const struct Document *da = a;
@@ -151,20 +151,39 @@ double get_bm25_for_doc(struct hashmap *corpus, struct Document *d, char **terms
 }
 
 
-// ######## API ############
-
-// initiating the corpus map
-struct hashmap *init_corpus() {
-    struct hashmap *corpus =
-        hashmap_new(CORPUS_EL_SIZE, 0, 0, 0, _hash,_compare, _free, NULL);
-    return corpus;
+void arr_push(struct QueryResults *a, struct QueryResult qr) {
+    struct QueryResult *tmp;
+    if(a->length == a->capacity) {
+        tmp = realloc(a->results,(a->capacity + DEFAULT_DA_CAPACITY) * QUERY_RESULT_SIZE);
+        if(tmp == NULL) {
+            return;
+        }
+        a->capacity += DEFAULT_DA_CAPACITY;
+        a->results = tmp;
+    }
+    a->results[a->length] = qr;
+    a->length++;
 }
 
-// adds a document to the corpus.
-void add_or_update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count) {
+struct QueryResults *arr_init() {
+    struct QueryResults *a = malloc(sizeof(struct QueryResults));
+    a->capacity = DEFAULT_DA_CAPACITY; 
+    a->length = 0;
+    a->results = malloc(a->capacity * QUERY_RESULT_SIZE);
+    return a;
+}
+
+void arr_free(struct QueryResults *a) {
+    for (size_t i = 0; i < a->length; ++i) {
+        free(a->results[i].key);
+    }
+    free(a->results);
+    free(a);
+};
+
+void _add_or_update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count) {
     struct Document d = {
         .terms = init_terms_map(),
-        .key = malloc(strlen(key))
     };
 
     copy_string(key, &d.key);
@@ -176,6 +195,120 @@ void add_or_update_document(struct hashmap *corpus, char *key, char **terms, siz
     hashmap_set(corpus, &d);
 }
 
+void *_add_char_to_string(char *str, char c){
+    char *new_str = NULL;
+    if(str == NULL) {
+        new_str = realloc(str, sizeof(c));
+        new_str[0] = c;
+        return new_str;
+    }
+
+    size_t size = strlen(str); 
+    new_str = realloc(str, size + sizeof(c));
+    if(new_str == NULL) {
+        free(str);
+        return NULL;
+    }
+    new_str[size] = c;
+    return new_str;
+}
+
+size_t _trim_left(char *content, size_t cursor)
+{
+    char c;
+    size_t len = strlen(content);
+    while (cursor < len) {
+        c = content[cursor];
+        if(isspace(c) || c == EOF)
+        {
+            cursor++;
+            continue;
+        }
+        break;
+    }
+    return cursor;
+}
+
+char *_get_next_word(char *content,size_t len, size_t *cursor)
+{
+    char *token = NULL;
+    // trimming all the spaces to the left
+    *cursor = _trim_left(content, *cursor);
+
+    while(*cursor < len) {
+        char c = tolower(content[*cursor]);
+
+        // if we hit a space, if so we finish reading a word
+        if(isspace(c) || c == EOF)
+        {
+            break;
+        }
+        // when hitting a digit, get all digits and letters
+        // example: 2nd, 100th
+        if(isdigit(c) == 1) {
+            while (*cursor < len) {
+                if(isdigit(c) == 1 || isalpha(c) == 1) {
+                    token = _add_char_to_string(token, c);
+                    *cursor += 1;
+                    c = tolower(content[*cursor]);
+                } else {
+                    return token;
+                }
+            }
+        }
+        // when hitting a letter, get all letters
+        // example: mom, table
+        if(isalpha(c) == 1) {
+            while (*cursor < len) {
+                if(isalpha(c) == 1) {
+                    token = _add_char_to_string(token, c);
+                    *cursor += 1;
+                    c = tolower(content[*cursor]);
+                } else {
+                    return token;
+                }
+            }
+        }
+        // if special char take till a break:".", ","
+        else {
+            token = _add_char_to_string(token, c);
+            *cursor += 1;
+            return token;
+        }
+    }
+    return token;
+}
+
+char **tokenize(char *content) {
+    size_t cursor = 0;
+    size_t len = strlen(content);
+    char **tokens = dynarray_create(char*);
+    while (cursor < len) {
+        char *token = _get_next_word(content, len, &cursor);
+        dynarray_push(tokens, token);
+    }
+
+    return tokens;
+}
+
+
+
+
+// ######## API ############
+
+// initiating the corpus map
+struct hashmap *init_corpus() {
+    struct hashmap *corpus =
+        hashmap_new(CORPUS_EL_SIZE, 0, 0, 0, _hash,_compare, _free, NULL);
+    return corpus;
+}
+
+// adds a document to the corpus.
+void add_or_update_document(struct hashmap *corpus, char *key, char *content) {
+    char **tokens = tokenize(content);
+    _add_or_update_document(corpus, key,  tokens, dynarray_length(tokens));
+    dynarray_destroy(tokens);
+}
 // remove a document from the corpus.
 // returns true if succeed, false if item not found
 bool remove_document(struct hashmap *corpus, char *key) {
@@ -190,21 +323,25 @@ size_t get_corpus_size(struct hashmap *corpus) {
  *  searching a string inside a given corpus.
  *  returning the n most relevant documents
  */
-char *search_query(struct hashmap *corpus, char **search_terms, size_t st_count, int n) {
-    // char *best[n];
-    // memset(best, NULL, n);
+struct QueryResults *_search_query(struct hashmap *corpus, char **search_terms, size_t st_count) {
+    struct QueryResults *best = arr_init();
     size_t i = 0;
     void *item = NULL;
-    char *best = NULL;
-    double max = 0;
 
     while(hashmap_iter(corpus, &i, &item)) {
         struct Document *d = item;
         double score = get_bm25_for_doc(corpus, d, search_terms, st_count);
-        if(max < score) { 
-            best = d->key;
-            max = score;
-        }
+        struct QueryResult qr;
+        qr.score = score;
+        copy_string(d->key, &qr.key);
+        arr_push(best, qr);
     }
     return best;
+}
+
+struct QueryResults *search_query(struct hashmap *corpus, char *search_query) {
+    char **tokens = tokenize(search_query);
+    struct QueryResults *res =  _search_query(corpus, tokens, dynarray_length(tokens));
+    dynarray_destroy(tokens);
+    return res;
 }

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/dirent.h>
+#include "dynarray/dynarray.h"
 #include "lib/lib.h"
 #include "tokenizer/tokenizer.h"
 #include "hash_map/hashmap.h"
@@ -69,62 +70,27 @@ int main2(int argc, char **argv){
 
 int main(int argc, char **argv) {
     struct hashmap *c = init_corpus();
-    char *doc1[] = {
-        "is", 
-        "is", 
-        "is", 
-        "is", 
-        "is", 
-        "is", 
-        "is", 
-        "red", "yellow", "red", "blue", "gray"
-    };
-    char *doc2[] = {
-        "red", "yellow", "magenta", "black", "magenta", "pink"
-    };
-    char *doc1edit[] = {
-        "term1doc1", "term2doc1", "3termdocrerdsfghjasdgh", "4term4doc2", "term1doc2"
-    };
+    char *query = "bomber pilot tower";
+    char *doc1 = "The Tower Realty Company was approved to build on the site in 1929. By May 1929 the site was cleared by razing buildings which included the State Savings and Trust and the Franklin buildings.[1] There was also the four-story building of the Starr Piano Company on the site which had to be purchased and razed. The piano store's 99-year lease also had to be purchased by the Tower Realty Company";
 
-    char *query[] = {
-        "red", "pink", "is"
-    };
+    char *doc2 = "William Ellis Newton, VC (8 June 1919 – 29 March 1943) was an Australian recipient of the Victoria Cross, the highest decoration for gallantry in the face of the enemy that can be awarded to a member of the British and Commonwealth armed forces. He was honoured for his actions as a bomber pilot in Papua New Guinea during March 1943 when, despite intense anti-aircraft fire, he pressed home a series of attacks on the Salamaua Isthmus, the last of which saw him forced to ditch his aircraft in the sea. Newton was still officially posted as missing when the award was made in October 1943. It later emerged that he had been taken captive by the Japanese, and executed by beheading on 29 March.";
 
-    add_or_update_document(c, "doc1",doc1, 12);
-    add_or_update_document(c, "doc2",doc2, 6);
-    // add_or_update_document(c, "doc1",doc1edit, 5);
-    // remove_document(c,"doc2");
+    add_or_update_document(c, "doc1", doc1);
+    add_or_update_document(c, "doc2", doc2);
     size_t i = 0;
     void *corpus_item = NULL;
     while (hashmap_iter(c, &i, &corpus_item)) {
         struct Document *doc = corpus_item;
         size_t j = 0;
         void *doc_item = NULL;
-        printf("doc key %s doc terms p: %p\n", doc->key, doc->terms);
         while (hashmap_iter(doc->terms ,&j, &doc_item)) {
             struct Term *term = doc_item;
-            printf("term: %s, count: %zu \n", term->key, term->count);
         }
     }
-    printf("the term term1 occures in %zu docs \n", get_doc_freq_for_term(c, "term1"));
-    printf("%s is the most relevant for the query: red is pink \n", search_query(c,query,2, 0));
+    struct QueryResults *ans = search_query(c,query);
+    for (int x = 0; x < ans->length; ++x) {
+        printf("result %s has score of %f \n", ans->results[x].key, ans->results[x].score);
+    }
+    arr_free(ans);
     hashmap_free(c);
 }
-// while(hashmap_iter(tf_files,&i,  &item)) {
-//     struct FileTf *file_tf_item = (struct FileTf*)(item);
-//     size_t j = 0;
-//     void *tf;
-//     printf("-----------------------\n");
-//     printf("Iterating over: %s \n", file_tf_item->path);
-//     printf("-----------------------\n");
-//     while(hashmap_iter(file_tf_item->tf,&j,  &tf)) {
-//         struct TermFreq *tf_as_tf = (struct TermFreq*)tf;
-//         struct DocFreq tmp = { .term = tf_as_tf->key};
-//         struct DocFreq* df = (struct DocFreq*)hashmap_get(corpus_info->df_files, &tmp);
-//
-//         double tfidf = calc_tfidf(df->count, tf_as_tf->freq, corpus_info->file_count); 
-//         printf("    -----------------------\n");
-//         printf("    df: %s: tfidf:  %f\n", df->term, tfidf);
-//         printf("    -----------------------\n");
-//     }
-// }
