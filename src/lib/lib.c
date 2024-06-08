@@ -1,13 +1,9 @@
 #include "lib.h"
-#include <ctype.h>
-#include <string.h>
 
 #define CORPUS_EL_SIZE sizeof(struct Document)
 #define TERM_EL_SIZE sizeof(struct Term)
-#define QUERY_RESULT_SIZE sizeof(struct QueryResult)
 #define K 1.2
 #define B 0.75
-#define DEFAULT_DA_CAPACITY 100
 
 int _compare(const void *a, const void *b, void *udata) {
     const struct Document *da = a;
@@ -150,37 +146,6 @@ double get_bm25_for_doc(struct hashmap *corpus, struct Document *d, char **terms
     return score;
 }
 
-
-void arr_push(struct QueryResults *a, struct QueryResult qr) {
-    struct QueryResult *tmp;
-    if(a->length == a->capacity) {
-        tmp = realloc(a->results,(a->capacity + DEFAULT_DA_CAPACITY) * QUERY_RESULT_SIZE);
-        if(tmp == NULL) {
-            return;
-        }
-        a->capacity += DEFAULT_DA_CAPACITY;
-        a->results = tmp;
-    }
-    a->results[a->length] = qr;
-    a->length++;
-}
-
-struct QueryResults *arr_init() {
-    struct QueryResults *a = malloc(sizeof(struct QueryResults));
-    a->capacity = DEFAULT_DA_CAPACITY; 
-    a->length = 0;
-    a->results = malloc(a->capacity * QUERY_RESULT_SIZE);
-    return a;
-}
-
-void arr_free(struct QueryResults *a) {
-    for (size_t i = 0; i < a->length; ++i) {
-        free(a->results[i].key);
-    }
-    free(a->results);
-    free(a);
-};
-
 void _add_or_update_document(struct hashmap *corpus, char *key, char **terms, size_t term_count) {
     struct Document d = {
         .terms = init_terms_map(),
@@ -291,7 +256,12 @@ char **tokenize(char *content) {
     return tokens;
 }
 
-
+void free_tokens(char **tokens, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        free(tokens[i]);
+    }
+    dynarray_destroy(tokens);
+}
 
 
 // ######## API ############
@@ -307,7 +277,7 @@ struct hashmap *init_corpus() {
 void add_or_update_document(struct hashmap *corpus, char *key, char *content) {
     char **tokens = tokenize(content);
     _add_or_update_document(corpus, key,  tokens, dynarray_length(tokens));
-    dynarray_destroy(tokens);
+    free_tokens(tokens, dynarray_length(tokens));
 }
 // remove a document from the corpus.
 // returns true if succeed, false if item not found
@@ -323,25 +293,35 @@ size_t get_corpus_size(struct hashmap *corpus) {
  *  searching a string inside a given corpus.
  *  returning the n most relevant documents
  */
-struct QueryResults *_search_query(struct hashmap *corpus, char **search_terms, size_t st_count) {
-    struct QueryResults *best = arr_init();
+struct QueryResult *_search_query(struct hashmap *corpus, char **search_terms, size_t st_count) {
+    struct QueryResult *best = dynarray_create(struct QueryResult);
     size_t i = 0;
     void *item = NULL;
 
     while(hashmap_iter(corpus, &i, &item)) {
         struct Document *d = item;
         double score = get_bm25_for_doc(corpus, d, search_terms, st_count);
+
+        if(score == 0) continue;
+
         struct QueryResult qr;
         qr.score = score;
         copy_string(d->key, &qr.key);
-        arr_push(best, qr);
+        dynarray_push(best, qr);
     }
     return best;
 }
 
-struct QueryResults *search_query(struct hashmap *corpus, char *search_query) {
+struct QueryResult *search_query(struct hashmap *corpus, char *search_query) {
     char **tokens = tokenize(search_query);
-    struct QueryResults *res =  _search_query(corpus, tokens, dynarray_length(tokens));
-    dynarray_destroy(tokens);
+    struct QueryResult *res = _search_query(corpus, tokens, dynarray_length(tokens));
+    free_tokens(tokens,dynarray_length(tokens));
     return res;
+}
+
+void free_query_results(struct QueryResult *qrs, size_t len) {
+    for (size_t i = 0; i < len; ++i) {
+        free(qrs[i].key);
+    }
+    dynarray_destroy(qrs);
 }

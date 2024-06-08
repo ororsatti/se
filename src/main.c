@@ -87,10 +87,10 @@ int main(int argc, char **argv) {
             struct Term *term = doc_item;
         }
     }
-    struct QueryResults *ans = search_query(c,query);
-    for (int x = 0; x < ans->length; ++x) {
-        printf("result %s has score of %f \n", ans->results[x].key, ans->results[x].score);
+    struct QueryResult *ans = search_query(c,query);
+    for (int x = 0; x < dynarray_length(ans); ++x) {
+        printf("result %s has score of %f \n", ans[x].key, ans[x].score);
     }
-    arr_free(ans);
+    free_query_results(ans, dynarray_length(ans));
     hashmap_free(c);
 }
